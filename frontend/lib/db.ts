@@ -47,12 +47,60 @@ export const updateItemStatus = async (itemId: string, status: 'available' | 'le
     }
 };
 
+/**
+ * Cascade delete an item along with all related requests and messages
+ * This ensures no orphaned data remains in borrower/lender accounts
+ * 
+ * @param itemId - The ID of the item to delete
+ */
 export const deleteItem = async (itemId: string) => {
     try {
-        const docRef = doc(db, ITEMS_COLLECTION, itemId);
-        await deleteDoc(docRef);
+        console.log(`Starting cascade delete for item: ${itemId}`);
+
+        // Step 1: Find all requests related to this item
+        const requestsQuery = query(
+            collection(db, REQUESTS_COLLECTION),
+            where("itemId", "==", itemId)
+        );
+        const requestsSnapshot = await getDocs(requestsQuery);
+
+        console.log(`Found ${requestsSnapshot.size} related requests to delete`);
+
+        // Step 2: Delete all messages in each request (subcollection)
+        // and collect request delete promises
+        const deletePromises: Promise<void>[] = [];
+
+        for (const requestDoc of requestsSnapshot.docs) {
+            // Get messages subcollection
+            const messagesRef = collection(
+                db,
+                REQUESTS_COLLECTION,
+                requestDoc.id,
+                MESSAGES_SUBCOLLECTION
+            );
+            const messagesSnapshot = await getDocs(messagesRef);
+
+            // Delete each message
+            messagesSnapshot.docs.forEach(msgDoc => {
+                deletePromises.push(deleteDoc(msgDoc.ref));
+            });
+
+            // Add request deletion to promises
+            deletePromises.push(deleteDoc(requestDoc.ref));
+        }
+
+        // Step 3: Execute all deletions in parallel for better performance
+        await Promise.all(deletePromises);
+
+        console.log(`Deleted ${deletePromises.length} related documents (requests + messages)`);
+
+        // Step 4: Delete the item itself
+        const itemRef = doc(db, ITEMS_COLLECTION, itemId);
+        await deleteDoc(itemRef);
+
+        console.log(`Successfully completed cascade delete for item: ${itemId}`);
     } catch (error) {
-        console.error("Error deleting item:", error);
+        console.error("Error in cascade delete:", error);
         throw error;
     }
 };
