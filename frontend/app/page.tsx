@@ -7,6 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/HeroSection';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ItemCard } from '@/components/ItemCard';
+import { Grid3x3, List, SlidersHorizontal, TrendingUp, MapPin, Clock, Package } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const NeighborhoodMap = dynamic(() => import('@/components/NeighborhoodMap').then(mod => mod.NeighborhoodMap), {
@@ -31,6 +32,8 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'distance' | 'newest' | 'popular'>('distance');
 
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [mapItems, setMapItems] = useState<Item[]>([]); // Items for the map (global)
@@ -203,13 +206,23 @@ export default function Home() {
     fetchItemsData(userLocation || DEFAULT_USER_LOCATION, 1); // Refresh list
   };
 
-  // Filter items for display (available items first)
+  // Sort and filter items for display
   const sortedItems = [...nearbyItems].sort((a, b) => {
+    // Priority 1: Available items first
     const statusA = a.status || 'available';
     const statusB = b.status || 'available';
     if (statusA === 'available' && statusB !== 'available') return -1;
     if (statusA !== 'available' && statusB === 'available') return 1;
-    return (a.distance || 0) - (b.distance || 0);
+
+    // Priority 2: Sort by selected criteria
+    if (sortBy === 'distance') {
+      return (a.distance || 0) - (b.distance || 0);
+    } else if (sortBy === 'newest') {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else if (sortBy === 'popular') {
+      return (b.borrowCount || 0) - (a.borrowCount || 0);
+    }
+    return 0;
   });
 
   if (authLoading || !user) {
@@ -267,16 +280,69 @@ export default function Home() {
 
           {/* Items Grid */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Showing <span className="font-semibold text-foreground">{nearbyItems.length}</span> items
-                {selectedCategory && (
-                  <> in <span className="font-semibold text-primary">{selectedCategory}</span></>
-                )}
-              </p>
+            {/* Results Header with Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border rounded-xl p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {searchQuery ? (
+                    <>
+                      Search results for <span className="text-primary font-semibold">"{searchQuery}"</span>
+                    </>
+                  ) : (
+                    <>Items Near You</>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{sortedItems.length}</span> items found
+                  {selectedCategory && (
+                    <> in <span className="text-primary font-medium">{selectedCategory}</span></>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2 text-xs">
+                  <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
+                  >
+                    <option value="distance">📍 Nearest</option>
+                    <option value="newest">🕐 Newest</option>
+                    <option value="popular">📈 Popular</option>
+                  </select>
+                </div>
+
+                {/* View Toggle */}
+                <div className="flex border border-border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 transition-colors ${viewMode === 'grid'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:text-foreground'
+                      }`}
+                    title="Grid view"
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 transition-colors ${viewMode === 'list'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:text-foreground'
+                      }`}
+                    title="List view"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
+            {/* Items Display */}
+            <div className={viewMode === 'grid' ? 'grid sm:grid-cols-2 gap-4' : 'space-y-4'}>
               {sortedItems.map((item, index) => (
                 <ItemCard
                   key={item.id}
@@ -299,15 +365,36 @@ export default function Home() {
               </div>
             )}
 
-            {nearbyItems.length === 0 && (
+            {nearbyItems.length === 0 && !loadingMore && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-12"
+                className="text-center py-16 bg-card border rounded-xl"
               >
-                <p className="text-muted-foreground">
-                  No items found in this category. Try selecting a different filter.
+                <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchQuery ? 'No items found' : 'No items available'}
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  {searchQuery ? (
+                    <>Try adjusting your filters or search for something different.</>
+                  ) : selectedCategory ? (
+                    <>No items in this category right now. Check back later or browse all items.</>
+                  ) : (
+                    <>Be the first to list an item in your neighborhood!</>
+                  )}
                 </p>
+                {(searchQuery || selectedCategory) && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory(null);
+                    }}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </motion.div>
             )}
           </div>

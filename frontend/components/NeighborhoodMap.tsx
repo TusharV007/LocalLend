@@ -100,14 +100,27 @@ export function NeighborhoodMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  // Guntur, Andhra Pradesh coordinates
-  const center: [number, number] = [16.3067, 80.4365];
-
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const userLocationRef = useRef<string>('');
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    const locationKey = JSON.stringify(userLocation);
+
+    if (!mapRef.current || userLocationRef.current === locationKey) return;
+
+    // Clear existing map if location changed
+    if (mapInstanceRef.current && userLocationRef.current !== '') {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    userLocationRef.current = locationKey;
+
+    // Extract coordinates from userLocation prop
+    const center: [number, number] = [
+      userLocation.coordinates[1], // latitude
+      userLocation.coordinates[0]  // longitude
+    ];
 
     // Initialize map
     const map = L.map(mapRef.current, {
@@ -147,7 +160,7 @@ export function NeighborhoodMap({
         markersLayerRef.current = null;
       }
     };
-  }, []); // Run only once
+  }, [userLocation]); // React to userLocation changes
 
   // Update markers when items change
   useEffect(() => {

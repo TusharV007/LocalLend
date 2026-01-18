@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from '@/components/Navbar';
+import { AddItemModal } from '@/components/AddItemModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItemCard } from '@/components/ItemCard';
@@ -23,6 +24,7 @@ export default function ProfilePage() {
     const router = useRouter();
     const [data, setData] = useState<ProfileData>({ listings: [], lended: [], borrowed: [] });
     const [loading, setLoading] = useState(true);
+    const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -68,7 +70,7 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar onAddItemClick={() => setIsAddItemModalOpen(true)} />
 
             <div className="container mx-auto px-4 py-8 max-w-5xl">
                 <div className="flex items-center gap-4 mb-8">
@@ -173,6 +175,21 @@ export default function ProfilePage() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <AddItemModal
+                isOpen={isAddItemModalOpen}
+                onClose={() => setIsAddItemModalOpen(false)}
+                onSuccess={() => {
+                    setIsAddItemModalOpen(false);
+                    toast.success('Item listed successfully!');
+                    // Reload items
+                    if (user) {
+                        fetchUserItems(user.uid).then(items => {
+                            setData(prev => ({ ...prev, listings: items }));
+                        });
+                    }
+                }}
+            />
         </div>
     );
 };

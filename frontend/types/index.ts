@@ -52,19 +52,26 @@ export interface Item {
 }
 
 // Booking schema - represents a lending transaction
-export interface Booking {
+export interface Request {
   id: string;
   itemId: string;
-  item: Item;
+  item?: Item;
   borrowerId: string;
-  borrower: User;
+  borrower?: User;
   lenderId: string;
-  lender: User;
-  startDate: Date;
-  endDate: Date;
-  status: BookingStatus;
-  message?: string;
+  lender?: User;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  requestedDates: {
+    start: Date;
+    end: Date;
+  };
+  message: string;
   createdAt: Date;
+  locationSharing?: {
+    enabled: boolean;
+    sharedLocation?: GeoJSONPoint;
+    lastUpdated?: Date;
+  };
 }
 
 // API Response types for geospatial queries

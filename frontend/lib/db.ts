@@ -305,3 +305,55 @@ export const subscribeToMessages = (requestId: string, callback: (messages: Mess
         callback(messages);
     });
 };
+
+// ============================================
+// LOCATION SHARING FUNCTIONS
+// ============================================
+
+/**
+ * Enable location sharing for an approved request
+ */
+export const enableLocationSharing = async (requestId: string) => {
+    try {
+        const requestRef = doc(db, REQUESTS_COLLECTION, requestId);
+        await updateDoc(requestRef, {
+            'locationSharing.enabled': true,
+            'locationSharing.lastUpdated': Timestamp.now()
+        });
+    } catch (error) {
+        console.error('Error enabling location sharing:', error);
+        throw error;
+    }
+};
+
+/**
+ * Update shared location coordinates
+ */
+export const updateSharedLocation = async (requestId: string, location: GeoJSONPoint) => {
+    try {
+        const requestRef = doc(db, REQUESTS_COLLECTION, requestId);
+        await updateDoc(requestRef, {
+            'locationSharing.sharedLocation': location,
+            'locationSharing.lastUpdated': Timestamp.now()
+        });
+    } catch (error) {
+        console.error('Error updating shared location:', error);
+        throw error;
+    }
+};
+
+/**
+ * Disable location sharing
+ */
+export const disableLocationSharing = async (requestId: string) => {
+    try {
+        const requestRef = doc(db, REQUESTS_COLLECTION, requestId);
+        await updateDoc(requestRef, {
+            'locationSharing.enabled': false,
+            'locationSharing.sharedLocation': null
+        });
+    } catch (error) {
+        console.error('Error disabling location sharing:', error);
+        throw error;
+    }
+};

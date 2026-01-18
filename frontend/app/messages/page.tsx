@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/Navbar';
 import { ChatWindow } from '@/components/ChatWindow';
+import { AddItemModal } from '@/components/AddItemModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { MessageCircle, Check, X, Clock } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function MessagesPage() {
     const [requests, setRequests] = useState<Request[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+    const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -94,7 +96,7 @@ export default function MessagesPage() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <Navbar />
+            <Navbar onAddItemClick={() => setIsAddItemModalOpen(true)} />
 
             <div className="container mx-auto px-4 py-8 max-w-2xl">
                 <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
@@ -152,6 +154,15 @@ export default function MessagesPage() {
                     />
                 )}
             </AnimatePresence>
+
+            <AddItemModal
+                isOpen={isAddItemModalOpen}
+                onClose={() => setIsAddItemModalOpen(false)}
+                onSuccess={() => {
+                    setIsAddItemModalOpen(false);
+                    toast.success('Item listed successfully!');
+                }}
+            />
         </div>
     );
 };

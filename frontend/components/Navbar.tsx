@@ -80,15 +80,21 @@ export function Navbar({ className, onAddItemClick, onSearch }: NavbarProps) {
 
           {/* Search Bar - Centered */}
           <div className="flex-1 max-w-md hidden md:block relative">
-            <div className="relative group">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const input = e.currentTarget.querySelector('input');
+              if (input?.value.trim()) {
+                router.push(`/search?q=${encodeURIComponent(input.value)}`);
+              }
+            }} className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
                 placeholder="Search items..."
                 className="w-full bg-secondary/50 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
-                onChange={(e) => onSearch?.(e.target.value)}
+                defaultValue={onSearch ? '' : undefined}
               />
-            </div>
+            </form>
           </div>
 
           {/* Desktop Navigation */}
@@ -149,6 +155,9 @@ export function Navbar({ className, onAddItemClick, onSearch }: NavbarProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push('/messages')}>
                   <MessageCircle className="mr-2 h-4 w-4" /> Messages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  <User className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
