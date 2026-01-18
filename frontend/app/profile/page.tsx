@@ -9,7 +9,7 @@ import { ItemCard } from '@/components/ItemCard';
 import { Package, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Item } from '@/types';
 import { useRouter } from 'next/navigation';
-import { fetchUserItems, updateItemStatus } from '@/lib/db';
+import { fetchUserItems, updateItemStatus, deleteItem } from '@/lib/db';
 import { toast } from 'sonner';
 
 interface ProfileData {
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                                 {data.listings.map((item, idx) => (
                                     <div key={item.id} className="relative group">
                                         <ItemCard item={item} index={idx} onRequestClick={() => { }} />
-                                        <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md shadow-sm border p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute top-2 right-2 flex gap-2 bg-background/90 backdrop-blur-sm rounded-md shadow-sm border p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <select
                                                 className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer outline-none"
                                                 value={item.status || 'available'}
@@ -105,7 +105,6 @@ export default function ProfilePage() {
                                                     const newStatus = e.target.value as any;
                                                     try {
                                                         await updateItemStatus(item.id, newStatus);
-                                                        // Optimistic update
                                                         setData(prev => ({
                                                             ...prev,
                                                             listings: prev.listings.map(l => l.id === item.id ? { ...l, status: newStatus } : l)
@@ -120,6 +119,26 @@ export default function ProfilePage() {
                                                 <option value="lended">Lended</option>
                                                 <option value="unavailable">Unavailable</option>
                                             </select>
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                                                        try {
+                                                            await deleteItem(item.id);
+                                                            setData(prev => ({
+                                                                ...prev,
+                                                                listings: prev.listings.filter(l => l.id !== item.id)
+                                                            }));
+                                                            toast.success('Item deleted successfully');
+                                                        } catch (err) {
+                                                            toast.error('Failed to delete item');
+                                                        }
+                                                    }
+                                                }}
+                                                className="text-red-600 hover:text-red-700 px-2 text-xs font-medium"
+                                                title="Delete item"
+                                            >
+                                                Delete
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

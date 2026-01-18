@@ -13,7 +13,8 @@ import {
     Timestamp,
     type DocumentData,
     or,
-    onSnapshot
+    onSnapshot,
+    deleteDoc
 } from "firebase/firestore";
 import type { Item, GeoJSONPoint } from "@/types";
 
@@ -42,6 +43,16 @@ export const updateItemStatus = async (itemId: string, status: 'available' | 'le
         await updateDoc(docRef, { status });
     } catch (error) {
         console.error("Error updating item status:", error);
+        throw error;
+    }
+};
+
+export const deleteItem = async (itemId: string) => {
+    try {
+        const docRef = doc(db, ITEMS_COLLECTION, itemId);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error("Error deleting item:", error);
         throw error;
     }
 };
