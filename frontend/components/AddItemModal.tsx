@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { addItem } from '@/lib/db';
 import { compressImage } from '@/lib/utils';
 import { uploadImage } from '@/lib/storage';
+import type { GeoJSONPoint, ItemCategory } from '@/types';
 
 interface AddItemModalProps {
     isOpen: boolean;
@@ -21,7 +22,12 @@ interface AddItemModalProps {
 export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) {
     const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        title: string;
+        description: string;
+        category: ItemCategory;
+        image: string;
+    }>({
         title: '',
         description: '',
         category: 'Tools',
@@ -66,22 +72,30 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                 throw new Error('Please fill all required fields');
             }
 
+            const location: GeoJSONPoint = {
+                type: 'Point' as const,
+                coordinates: [80.4365, 16.3067] // Default Guntur
+            };
+
             const newItem = {
                 ...formData,
                 ownerId: user?.uid || 'anonymous',
                 owner: {
                     id: user?.uid || 'anonymous',
                     name: user?.displayName || 'Anonymous',
-                    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80', // Mock avatar
+                    email: user?.email || '',
+                    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+                    location,
+                    address: 'Guntur, Andhra Pradesh',
                     trustScore: 5.0,
+                    totalReviews: 0,
                     itemsLentCount: 0,
+                    itemsBorrowedCount: 0,
+                    memberSince: new Date(),
                     verified: true
                 },
-                availabilityStatus: 'Available',
-                location: {
-                    type: 'Point',
-                    coordinates: [80.4365, 16.3067] // Default Guntur
-                },
+                availabilityStatus: 'Available' as const,
+                location,
                 distance: 0, // Calculated by backend or frontend later
                 images: [formData.image],
                 borrowCount: 0,
