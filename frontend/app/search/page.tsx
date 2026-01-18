@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -16,7 +17,7 @@ import { AddItemModal } from '@/components/AddItemModal';
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
 
-export default function SearchPage() {
+function SearchPageContent() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -215,8 +216,8 @@ export default function SearchPage() {
                             <button
                                 onClick={() => setViewMode('grid')}
                                 className={`p-2 transition-colors ${viewMode === 'grid'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-background text-muted-foreground hover:text-foreground'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-background text-muted-foreground hover:text-foreground'
                                     }`}
                                 title="Grid view"
                             >
@@ -225,8 +226,8 @@ export default function SearchPage() {
                             <button
                                 onClick={() => setViewMode('list')}
                                 className={`p-2 transition-colors ${viewMode === 'list'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-background text-muted-foreground hover:text-foreground'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-background text-muted-foreground hover:text-foreground'
                                     }`}
                                 title="List view"
                             >
@@ -296,5 +297,14 @@ export default function SearchPage() {
                 }}
             />
         </div>
+    );
+}
+
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+            <SearchPageContent />
+        </Suspense>
     );
 }
