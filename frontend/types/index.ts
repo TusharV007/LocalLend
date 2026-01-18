@@ -1,0 +1,83 @@
+// Locale Lend Type Definitions
+// These types mirror what would be Mongoose schemas in a full-stack app
+
+export type ItemCategory = 'Tools' | 'Electronics' | 'Kitchen' | 'Outdoor' | 'Books' | 'Sports';
+
+export type AvailabilityStatus = 'Available' | 'Borrowed' | 'Reserved' | 'Unavailable';
+
+export type BookingStatus = 'Pending' | 'Active' | 'Completed' | 'Cancelled';
+
+// GeoJSON Point type for location data
+// In MongoDB, this would use 2dsphere indexing for geospatial queries
+export interface GeoJSONPoint {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude] - GeoJSON standard
+}
+
+// User schema - represents a neighbor in the community
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  // GeoJSON Point for geospatial queries with $near operator
+  location: GeoJSONPoint;
+  address: string;
+  // Trust Score: Weighted average of peer reviews (70%) and successful returns (30%)
+  trustScore: number;
+  totalReviews: number;
+  itemsLentCount: number;
+  itemsBorrowedCount: number;
+  memberSince: Date;
+  verified: boolean;
+}
+
+// Item schema - represents a shareable resource
+export interface Item {
+  id: string;
+  ownerId: string;
+  owner: User;
+  title: string;
+  description: string;
+  category: ItemCategory;
+  // GeoJSON Point for proximity search using MongoDB $near operator
+  location: GeoJSONPoint;
+  images: string[];
+  availabilityStatus: AvailabilityStatus;
+  // Distance in meters, calculated from geospatial query
+  distance?: number;
+  createdAt: Date;
+  status: 'available' | 'lended' | 'unavailable';
+  borrowCount: number;
+}
+
+// Booking schema - represents a lending transaction
+export interface Booking {
+  id: string;
+  itemId: string;
+  item: Item;
+  borrowerId: string;
+  borrower: User;
+  lenderId: string;
+  lender: User;
+  startDate: Date;
+  endDate: Date;
+  status: BookingStatus;
+  message?: string;
+  createdAt: Date;
+}
+
+// API Response types for geospatial queries
+export interface NearbyItemsQuery {
+  lat: number;
+  lng: number;
+  radius?: number; // Default: 2000 meters (2km)
+  category?: ItemCategory;
+}
+
+export interface NearbyItemsResponse {
+  items: Item[];
+  total: number;
+  radius: number;
+  center: GeoJSONPoint;
+}

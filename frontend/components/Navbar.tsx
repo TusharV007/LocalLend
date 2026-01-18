@@ -1,0 +1,166 @@
+"use client";
+
+import { motion } from 'framer-motion';
+import { Home, Search, PlusCircle, MessageCircle, User, Bell, LogOut, Package } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// ... imports
+
+interface NavbarProps {
+  className?: string;
+  onAddItemClick?: () => void;
+  onSearch?: (query: string) => void;
+}
+
+export function Navbar({ className, onAddItemClick, onSearch }: NavbarProps) {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  // Poll for notifications (pending incoming requests)
+  useEffect(() => {
+    if (!user) return;
+
+    const checkNotifications = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/requests/${user.uid}`);
+        if (response.ok) {
+          const requests = await response.json();
+          const pending = requests.filter((r: any) => r.lenderId === user.uid && r.status === 'pending');
+          setNotificationCount(pending.length);
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    };
+
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/auth');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className={cn(
+        'sticky top-0 z-40 w-full bg-background/80 backdrop-blur-lg border-b border-border',
+        className
+      )}
+    >
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16 gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => router.push('/')}>
+            <Image src="/logo.png" alt="Locale Lend Logo" width={40} height={40} className="rounded-xl object-cover" priority />
+            <span className="text-xl font-bold text-foreground hidden sm:block">
+              Locale <span className="text-primary">Lend</span>
+            </span>
+          </div>
+
+          {/* Search Bar - Centered */}
+          <div className="flex-1 max-w-md hidden md:block relative">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                type="text"
+                placeholder="Search items..."
+                className="w-full bg-secondary/50 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                onChange={(e) => onSearch?.(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {/* Removed 'Browse' as it's redundant with logo/home */}
+            {[
+              { icon: PlusCircle, label: 'List Item', active: false, onClick: onAddItemClick },
+              { icon: MessageCircle, label: 'Messages', active: false, onClick: () => router.push('/messages') },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={item.onClick}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  item.active
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Mobile Search Icon (visible on small screens) */}
+          <button className="md:hidden p-2 text-muted-foreground" onClick={() => {/* Toggle mobile search */ }}>
+            <Search className="w-5 h-5" />
+          </button>
+
+          {/* ... User Actions */}
+          <div className="flex items-center gap-3">
+            {/* ... notification and profile buttons (existing code) */}
+            <button
+              className="relative p-2 rounded-full hover:bg-secondary transition-colors"
+              onClick={() => router.push('/messages')}
+            >
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              {notificationCount > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {notificationCount}
+                </span>
+              )}
+            </button>
+
+            {/* Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
+                  <User className="w-5 h-5 text-secondary-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/profile')}>
+                  <Package className="mr-2 h-4 w-4" /> My Items
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/messages')}>
+                  <MessageCircle className="mr-2 h-4 w-4" /> Messages
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    </motion.header>
+  );
+}

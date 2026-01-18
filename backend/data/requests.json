@@ -1,0 +1,14 @@
+[
+  {
+    "itemId": "item-7",
+    "itemTitle": "Board Games Collection",
+    "borrowerId": "mock-uid-1767540915012",
+    "borrowerName": "Tarun",
+    "lenderId": "user-3",
+    "lenderName": "Emily Rodriguez",
+    "message": "",
+    "id": "1767545712760",
+    "status": "pending",
+    "createdAt": "2026-01-04T16:55:12.760Z"
+  }
+]

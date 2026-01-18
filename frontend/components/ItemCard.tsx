@@ -1,0 +1,123 @@
+import { motion } from 'framer-motion';
+import { MapPin, Star, Clock, User } from 'lucide-react';
+import type { Item } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+interface ItemCardProps {
+  item: Item;
+  onRequestClick: (item: Item) => void;
+  index?: number;
+}
+
+export function ItemCard({ item, onRequestClick, index = 0 }: ItemCardProps) {
+  const statusColors: Record<string, string> = {
+    available: 'bg-green-500/10 text-green-600 border-green-500/20',
+    lended: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    unavailable: 'bg-red-500/10 text-red-600 border-red-500/20',
+  };
+
+  const formatDistance = (meters?: number) => {
+    if (!meters) return 'Nearby';
+    if (meters < 1000) return `${meters}m away`;
+    return `${(meters / 1000).toFixed(1)}km away`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
+      whileHover={{ y: -4 }}
+      className="group relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-hover transition-all duration-300"
+    >
+      {/* Image */}
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <img
+          src={item.images[0]}
+          alt={item.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent" />
+
+        {/* Status badge */}
+        <Badge
+          variant="outline"
+          className={cn(
+            'absolute top-3 right-3 backdrop-blur-sm border',
+            statusColors[item.status || 'available']
+          )}
+        >
+          {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Available'}
+        </Badge>
+
+        {/* Distance badge */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/90 backdrop-blur-sm text-xs font-medium">
+          <MapPin className="w-3 h-3 text-primary" />
+          {formatDistance(item.distance)}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-3">
+        <div>
+          <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-1">
+            {item.title}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            {item.description}
+          </p>
+        </div>
+
+        {/* Owner info */}
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center gap-2">
+            {item.owner.avatar ? (
+              <img
+                src={item.owner.avatar}
+                alt={item.owner.name}
+                className="w-8 h-8 rounded-full object-cover border-2 border-primary/20"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                <User className="w-4 h-4 text-secondary-foreground" />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-card-foreground">
+                {item.owner.name}
+              </span>
+              <div className="flex items-center gap-1">
+                <Star className="w-3 h-3 text-accent fill-accent" />
+                <span className="text-xs text-muted-foreground">
+                  {item.owner.trustScore.toFixed(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            {item.borrowCount} borrows
+          </div>
+        </div>
+
+        {/* Action button */}
+        {(item.status === 'available' || !item.status) && (
+          <Button
+            size="sm"
+            variant="accent"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent opening item details
+              onRequestClick(item);
+            }}
+          >
+            Request to Borrow
+          </Button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
