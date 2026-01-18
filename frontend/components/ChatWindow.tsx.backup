@@ -7,6 +7,12 @@ import { subscribeToMessages, sendMessage, type Message, type RequestData } from
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// Temporarily disabled for build fix
+// import { useLocationSharing } from '@/hooks/useLocationSharing';
+// import { LiveLocationMap } from './LiveLocationMap';
+// import { doc, onSnapshot } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import { toast } from 'sonner';
 
 interface ChatWindowProps {
     request: RequestData;
@@ -19,6 +25,17 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Location sharing state
+    const [locationSharingEnabled, setLocationSharingEnabled] = useState(false);
+    const [sharedLocation, setSharedLocation] = useState<any>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+    const [showLocationMap, setShowLocationMap] = useState(false);
+    const { startSharing, stopSharing, currentLocation, error: locationError, isSharing } = useLocationSharing();
+
+    const isBorrower = user?.uid === request.borrowerId;
+    const isOwner = user?.uid === request.lenderId;
+    const isApproved = request.status === 'accepted';
 
     useEffect(() => {
         // Subscribe to real-time messages
@@ -50,7 +67,56 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
         }
     };
 
-    const isBorrower = user?.uid === request.borrowerId;
+    // Listen to location sharing updates
+    useEffect(() => {
+        if (!request.id) return;
+
+        const requestRef = doc(db, 'requests', request.id);
+        const unsubscribe = onSnapshot(requestRef, (doc) => {
+            const data = doc.data();
+            if (data?.locationSharing) {
+                setLocationSharingEnabled(data.locationSharing.enabled || false);
+                setSharedLocation(data.locationSharing.sharedLocation);
+                if (data.locationSharing.lastUpdated) {
+                    setLastUpdated(data.locationSharing.lastUpdated.toDate());
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [request.id]);
+
+    // Auto-update location when sharing is enabled
+    useEffect(() => {
+        if (isOwner && locationSharingEnabled && currentLocation) {
+            updateSharedLocation(request.id, currentLocation).catch(err => {
+                console.error('Failed to update location:', err);
+            });
+        }
+    }, [currentLocation, locationSharingEnabled, isOwner, request.id]);
+
+    const handleToggleLocationSharing = async () => {
+        if (!isApproved) {
+            toast.error('Location sharing only available for approved requests');
+            return;
+        }
+
+        try {
+            if (locationSharingEnabled) {
+                await disableLocationSharing(request.id);
+                stopSharing();
+                toast.success('Location sharing stopped');
+            } else {
+                await enableLocationSharing(request.id);
+                startSharing();
+                toast.success('Location sharing enabled');
+            }
+        } catch (error) {
+            toast.error('Failed to toggle location sharing');
+            console.error(error);
+        }
+    };
+
     const otherPartyName = isBorrower ? request.lenderName : request.borrowerName;
 
     return (
@@ -61,14 +127,45 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
             className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-background border-l shadow-2xl z-50 flex flex-col"
         >
             {/* Header */}
-            <div className="p-4 border-b flex items-center justify-between bg-card">
-                <div>
-                    <h3 className="font-semibold text-lg">{otherPartyName}</h3>
-                    <p className="text-sm text-muted-foreground">{request.itemTitle}</p>
+            <div className="p-4 border-b bg-card">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="font-semibold text-lg">{otherPartyName}</h3>
+                        <p className="text-sm text-muted-foreground">{request.itemTitle}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose}>
+                        <X className="w-5 h-5" />
+                    </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                    <X className="w-5 h-5" />
-                </Button>
+
+                {/* Location Sharing Controls */}
+                {isApproved && (
+                    <div className="flex items-center gap-2">
+                        {isOwner && (
+                            <Button
+                                onClick={handleToggleLocationSharing}
+                                variant={locationSharingEnabled ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1"
+                            >
+                                <MapPin className="w-4 h-4 mr-2" />
+                                {locationSharingEnabled ? 'Stop Sharing Location' : 'Share My Location'}
+                            </Button>
+                        )}
+
+                        {isBorrower && locationSharingEnabled && sharedLocation && (
+                            <Button
+                                onClick={() => setShowLocationMap(true)}
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                            >
+                                <Navigation className="w-4 h-4 mr-2" />
+                                View Owner's Location
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Messages Area */}
@@ -134,6 +231,18 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
                     </Button>
                 </form>
             </div>
+
+            {/* Live Location Map Modal */}
+            {showLocationMap && sharedLocation && (
+                <LiveLocationMap
+                    isOpen={showLocationMap}
+                    onClose={() => setShowLocationMap(false)}
+                    ownerLocation={sharedLocation}
+                    borrowerLocation={currentLocation || undefined}
+                    ownerName={otherPartyName}
+                    lastUpdated={lastUpdated}
+                />
+            )}
         </motion.div>
     );
 }
