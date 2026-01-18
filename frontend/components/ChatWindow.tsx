@@ -1,12 +1,18 @@
+"use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, X, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Send, X, MapPin, Navigation } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeToMessages, sendMessage, type Message, type RequestData } from '@/lib/db';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import dynamic from 'next/dynamic';
+
+// Dynamically import location sharing components (client-only)
+const LocationSharingControls = dynamic(
+    () => import('./LocationSharingControls'),
+    { ssr: false }
+);
 
 interface ChatWindowProps {
     request: RequestData;
@@ -20,11 +26,13 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
     const [sending, setSending] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    const isBorrower = user?.uid === request.borrowerId;
+    const otherPartyName = isBorrower ? request.lenderName : request.borrowerName;
+    const isApproved = request.status === 'accepted';
+
     useEffect(() => {
-        // Subscribe to real-time messages
         const unsubscribe = subscribeToMessages(request.id, (msgs) => {
             setMessages(msgs);
-            // Scroll to bottom on new message
             setTimeout(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -50,9 +58,6 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
         }
     };
 
-    const isBorrower = user?.uid === request.borrowerId;
-    const otherPartyName = isBorrower ? request.lenderName : request.borrowerName;
-
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -61,14 +66,27 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
             className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-background border-l shadow-2xl z-50 flex flex-col"
         >
             {/* Header */}
-            <div className="p-4 border-b flex items-center justify-between bg-card">
-                <div>
-                    <h3 className="font-semibold text-lg">{otherPartyName}</h3>
-                    <p className="text-sm text-muted-foreground">{request.itemTitle}</p>
+            <div className="p-4 border-b bg-card">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="font-semibold text-lg">{otherPartyName}</h3>
+                        <p className="text-sm text-muted-foreground">{request.itemTitle}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose}>
+                        <X className="w-5 h-5" />
+                    </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                    <X className="w-5 h-5" />
-                </Button>
+
+                {/* Location Sharing - Only loads on client */}
+                {isApproved && user && (
+                    <LocationSharingControls
+                        requestId={request.id}
+                        userId={user.uid}
+                        isOwner={user.uid === request.lenderId}
+                        isBorrower={isBorrower}
+                        otherPartyName={otherPartyName}
+                    />
+                )}
             </div>
 
             {/* Messages Area */}
@@ -80,7 +98,6 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
                     </div>
                 )}
 
-                {/* Initial Request Message */}
                 {request.message && (
                     <div className="flex justify-start">
                         <div className="bg-secondary/50 text-secondary-foreground max-w-[80%] rounded-2xl rounded-tl-none px-4 py-2 border border-border/50">
@@ -99,8 +116,8 @@ export function ChatWindow({ request, onClose }: ChatWindowProps) {
                         >
                             <div
                                 className={`max-w-[80%] rounded-2xl px-4 py-2 ${isMe
-                                    ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                    : 'bg-secondary text-secondary-foreground rounded-tl-none'
+                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                        : 'bg-secondary text-secondary-foreground rounded-tl-none'
                                     }`}
                             >
                                 <p>{msg.content}</p>

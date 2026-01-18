@@ -16,15 +16,14 @@ export function useLocationSharing(): UseLocationSharingReturn {
     const [watchId, setWatchId] = useState<number | null>(null);
 
     const startSharing = useCallback(() => {
-        if (!navigator.geolocation) {
-            setError('Geolocation is not supported by your browser');
+        // SSR safety - check if we're in browser
+        if (typeof window === 'undefined' || !navigator?.geolocation) {
+            setError('Geolocation is not supported');
             return;
         }
 
-        // Clear any previous errors
         setError(null);
 
-        // Watch position with high accuracy
         const id = navigator.geolocation.watchPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
@@ -40,16 +39,16 @@ export function useLocationSharing(): UseLocationSharingReturn {
                 console.error('Geolocation error:', err);
                 switch (err.code) {
                     case err.PERMISSION_DENIED:
-                        setError('Location permission denied. Please enable location access.');
+                        setError('Location permission denied');
                         break;
                     case err.POSITION_UNAVAILABLE:
-                        setError('Location information unavailable.');
+                        setError('Location unavailable');
                         break;
                     case err.TIMEOUT:
-                        setError('Location request timed out.');
+                        setError('Location request timed out');
                         break;
                     default:
-                        setError('An unknown error occurred while getting location.');
+                        setError('Unknown error getting location');
                 }
                 setIsSharing(false);
             },
@@ -64,7 +63,7 @@ export function useLocationSharing(): UseLocationSharingReturn {
     }, []);
 
     const stopSharing = useCallback(() => {
-        if (watchId !== null) {
+        if (typeof window !== 'undefined' && watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             setWatchId(null);
         }
@@ -72,10 +71,9 @@ export function useLocationSharing(): UseLocationSharingReturn {
         setCurrentLocation(null);
     }, [watchId]);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (watchId !== null) {
+            if (typeof window !== 'undefined' && watchId !== null) {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
