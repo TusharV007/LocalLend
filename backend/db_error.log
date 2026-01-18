@@ -1,3 +1,0 @@
-Connecting to MySQL... { host: 'localhost', user: 'root', password: 'password' }
-Database setup failed: 
-Please ensure MySQL is running and credentials in .env are correct.
