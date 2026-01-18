@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { fetchUserRequests } from '@/lib/db';
 
 // ... imports
 
@@ -35,12 +36,9 @@ export function Navbar({ className, onAddItemClick, onSearch }: NavbarProps) {
 
     const checkNotifications = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/requests/${user.uid}`);
-        if (response.ok) {
-          const requests = await response.json();
-          const pending = requests.filter((r: any) => r.lenderId === user.uid && r.status === 'pending');
-          setNotificationCount(pending.length);
-        }
+        const requests = await fetchUserRequests(user.uid);
+        const pending = requests.filter((r: any) => r.lenderId === user.uid && r.status === 'pending');
+        setNotificationCount(pending.length);
       } catch (error) {
         // Silently fail
       }

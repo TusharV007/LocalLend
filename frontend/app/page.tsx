@@ -118,11 +118,11 @@ export default function Home() {
     if (!user) return;
     const fetchMapItems = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/items?limit=1000');
-        const data = await response.json();
-        setMapItems(data.items || []);
+        // Use same Firestore fetch with higher limit for map
+        const allItems = await fetchItems(100);
+        setMapItems(allItems);
       } catch (error) {
-        // console.error('Failed to fetch map items:', error);
+        console.error('Failed to fetch map items:', error);
       }
     };
     fetchMapItems();
