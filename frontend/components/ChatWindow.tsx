@@ -1,17 +1,18 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, X, AlertCircle, MapPin, Navigation } from 'lucide-react';
+import { Send, X, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { subscribeToMessages, sendMessage, enableLocationSharing, disableLocationSharing, updateSharedLocation, type Message, type RequestData } from '@/lib/db';
+import { subscribeToMessages, sendMessage, type Message, type RequestData } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useLocationSharing } from '@/hooks/useLocationSharing';
-import { LiveLocationMap } from './LiveLocationMap';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { toast } from 'sonner';
+// Temporarily disabled for build fix
+// import { useLocationSharing } from '@/hooks/useLocationSharing';
+// import { LiveLocationMap } from './LiveLocationMap';
+// import { doc, onSnapshot } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import { toast } from 'sonner';
 
 interface ChatWindowProps {
     request: RequestData;
