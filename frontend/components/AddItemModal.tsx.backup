@@ -37,6 +37,7 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
         image: '',
     });
 
+
     const captureLocation = () => {
         if (typeof window === 'undefined' || !navigator?.geolocation) {
             setLocationError('Geolocation not supported');
@@ -85,11 +86,14 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                 const toastId = toast.loading("Processing image...");
                 const compressedBase64 = await compressImage(file);
 
+                // Upload to Firebase Storage
                 toast.loading("Uploading...", { id: toastId });
 
+                // Convert Base64 to Blob
                 const res = await fetch(compressedBase64);
                 const blob = await res.blob();
 
+                // Create unique path
                 const filename = `items/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
 
                 const downloadURL = await uploadImage(blob, filename);
@@ -112,10 +116,9 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                 throw new Error('Please fill all required fields');
             }
 
-            // Use captured location or default to Guntur
-            const itemLocation: GeoJSONPoint = location || {
+            const location: GeoJSONPoint = {
                 type: 'Point' as const,
-                coordinates: [80.4365, 16.3067]
+                coordinates: [80.4365, 16.3067] // Default Guntur
             };
 
             const newItem = {
@@ -126,7 +129,7 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                     name: user?.displayName || 'Anonymous',
                     email: user?.email || '',
                     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                    location: itemLocation,
+                    location,
                     address: 'Guntur, Andhra Pradesh',
                     trustScore: 5.0,
                     totalReviews: 0,
@@ -136,14 +139,16 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                     verified: true
                 },
                 availabilityStatus: 'Available' as const,
-                location: itemLocation,
-                distance: 0,
+                location,
+                distance: 0, // Calculated by backend or frontend later
                 images: [formData.image],
                 borrowCount: 0,
-                rentPrice: 0
+                rentPrice: 0 // Default free for now
             };
 
-            await addItem(newItem);
+            const docId = await addItem(newItem);
+
+            // if (!response.ok) throw new Error('Failed to add item'); // addItem throws if fails
 
             toast.success('Item listed successfully!');
             onSuccess();
@@ -163,6 +168,7 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -171,6 +177,7 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
                     />
 
+                    {/* Modal */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -244,47 +251,22 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
                                         id="description"
                                         value={formData.description}
                                         onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        placeholder="Describe your item..."
-                                        rows={3}
+                                        placeholder="Describe the condition and details..."
                                         required
                                     />
-                                </div>
-
-                                {/* Location Capture */}
-                                <div className="space-y-2">
-                                    <Label>Item Location</Label>
-                                    <Button
-                                        type="button"
-                                        variant={location ? "default" : "outline"}
-                                        onClick={captureLocation}
-                                        disabled={isCapturingLocation}
-                                        className="w-full"
-                                    >
-                                        <MapPin className="w-4 h-4 mr-2" />
-                                        {isCapturingLocation ? 'Getting Location...' : location ? 'Location Captured ✓' : 'Capture My Location'}
-                                    </Button>
-                                    {location && (
-                                        <p className="text-xs text-green-600">📍  Location captured successfully</p>
-                                    )}
-                                    {locationError && (
-                                        <p className="text-xs text-red-600">{locationError}</p>
-                                    )}
-                                    {!location && !locationError && (
-                                        <p className="text-xs text-muted-foreground">Capture your location so borrowers can see how far away your item is</p>
-                                    )}
                                 </div>
                             </form>
                         </div>
 
-                        <div className="p-6 border-t bg-secondary/20">
-                            <Button
-                                type="submit"
-                                form="add-item-form"
-                                className="w-full"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? 'Listing...' : 'List Item'}
-                            </Button>
+                        <div className="p-6 border-t bg-card rounded-b-xl">
+                            <div className="flex gap-3">
+                                <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" form="add-item-form" disabled={isSubmitting} className="flex-1">
+                                    {isSubmitting ? 'Listing...' : 'List Item'}
+                                </Button>
+                            </div>
                         </div>
                     </motion.div>
                 </div>
@@ -293,3 +275,4 @@ export function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) 
         document.body
     );
 }
+
